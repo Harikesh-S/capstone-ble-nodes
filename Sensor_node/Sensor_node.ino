@@ -1,8 +1,8 @@
 /**
-   Testing BLE communcation with two sensor characteristics and one timer
+   BLE communcation with two sensor characteristics and one timer
    characteristic with AES-GCM encryption.
 
-   The BLE communcation are whitelisted to only allow connections with
+   The BLE communcation is whitelisted to only allow connections with
    a set gateway device.
 
    The sensor characteristics will be updated with new data when data is requested.
