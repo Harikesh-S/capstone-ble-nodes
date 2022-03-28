@@ -13,7 +13,7 @@
 #include <mbedtls/gcm.h>
 #include <DHT.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define BLE_DEVICE_NAME "Local Node 2"
 #define SERVICE_UUID "86df3990-4bdf-442e-8eb7-04bbd173e4a7"
@@ -113,6 +113,12 @@ class LedCallbacks: public BLECharacteristicCallbacks {
           newValue += digit;
           i++;
         }
+        if (newValue > 4095) {
+#ifdef DEBUG
+          Serial.println("Invalid data - > 255");
+#endif
+          return;
+        }
         ledValue = newValue;
 #ifdef DEBUG
         Serial.print("New LED value = ");
@@ -131,7 +137,10 @@ void setup() {
 #ifdef DEBUG
   Serial.begin(115200);
 #endif
+
   pinMode(LED_BUILTIN, OUTPUT);
+  ledcSetup(0, 9000, 12);
+  ledcAttachPin(LED_PIN, 0);
 
 #ifdef DEBUG
   Serial.println("Initializing BLE Server...");
@@ -171,6 +180,7 @@ void setup() {
 }
 
 void loop() {
+  ledcWrite(0, ledValue);
   // Blink LED if no device is connected
   if (!deviceConnected) {
     currentMillis = millis();
