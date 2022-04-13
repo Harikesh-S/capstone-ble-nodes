@@ -1,10 +1,11 @@
 char* serverKey = "1234567890123456";
-char* userKey = "abcdefghijklmnop";
+uint8_t userKey[16];
+bool userKeySet = false;
 mbedtls_gcm_context aes;
 int nonce = 0;
 char iv[12];
 
-void encrypt(char* key, char *input, unsigned char *output, int msgLen) {;
+void encrypt(uint8_t* key, char *input, unsigned char *output, int msgLen) {;
   sprintf(iv, "%012d", nonce++);
   encrypt(key,input,output,msgLen,(unsigned char*)iv);
 }
@@ -13,7 +14,7 @@ void encrypt(char* key, char *input, unsigned char *output, int msgLen) {;
    The function uses the global nonce variable to generate a unique iv for each encryption
    The output contains the iv(12 bits)|data|tag(16 bits)
 */
-void encrypt(char* key, char *input, unsigned char *output, int msgLen, unsigned char* iv) {
+void encrypt(uint8_t* key, char *input, unsigned char *output, int msgLen, unsigned char* iv) {
   for (int i = 0; i < 12; i++) {
     output[i] = iv[i];
   }

@@ -1,67 +1,76 @@
 void serverActions(WiFiClient client) {
   uint8_t data[200];
   unsigned char message[172];
-  while(client.connected()) {
-    if(client.available()) {
-      int len = client.read(data,200);
+  while (client.connected()) {
+    if (client.available()) {
+      int len = client.read(data, 200);
+      
+#ifdef DEBUG
       Serial.print("Received message. Length = ");
       Serial.print(len);
       Serial.println();
-      for(int i=0;i<len;i++) {
+      for (int i = 0; i < len; i++) {
         Serial.print(data[i]);
         Serial.print(" ");
       }
       Serial.println();
+#endif
 
       int msgLen = len - 12 - 16;
-      int auth = decrypt(serverKey,data,message,msgLen);
-      if(auth == 0) {
-        int i;
-        for(i=0; i<12; i++) {
-          Serial.print((char)message[i]);
-        }
-        Serial.print("  ");
-        for(;i<msgLen;i++) {
-          Serial.print((char)message[i]);
-        }
-        Serial.println();
-        if(message[12] == int('K') && message[13] == int('E') && message[14] == int('Y')) {
+      int auth = decrypt(serverKey, data, message, msgLen);
+      if (auth == 0) {
+
+        if (message[12] == int('K') && message[13] == int('E') && message[14] == int('Y')) {
+#ifdef DEBUG
           Serial.println("Key requested.");
-          // TODO Generate key
-          char* generatedKey = "1234567890123456";
-          int resMsgLen = 16;
-          
-          unsigned char toSend [12+16+resMsgLen];
+#endif
 
-          encrypt(serverKey, generatedKey, toSend, resMsgLen, message);
-          int i;
-          for(i=0;i<12;i++) {
-            Serial.print(toSend[i]);
-            Serial.print(" ");
-          }
-           Serial.println();
-          for(;i<12+resMsgLen;i++) {
-            Serial.print(toSend[i]);
-            Serial.print(" ");
-          }
-           Serial.println();
-          for(;i<12+resMsgLen+16;i++) {
-            Serial.print(toSend[i]);
-            Serial.print(" ");
+          if (userKeySet) {
+            // User is already connected, thus do not generate a new key
+            break;
           }
 
-          client.write((const char*)toSend, 12+resMsgLen+16);
+          // Generate key, encrypt it, send it and disconnect
+          userKeySet = true;
+          int keyLen = 16;
+
+          esp_random();
+
+#ifdef DEBUG
+          Serial.print("Generated key : ");
+#endif
+          for (int i = 0; i < keyLen; i++) {
+            userKey[i] = random(256);
+#ifdef DEBUG
+            Serial.print(userKey[i]);
+            Serial.print(" ");
+#endif
+          }
+#ifdef DEBUG
+          Serial.println();
+#endif
+
+          unsigned char encryptedKey[12 + 16 + keyLen];
+          encrypt((uint8_t*)serverKey, (char*)userKey, encryptedKey, keyLen, message);
+          client.write((const char*)encryptedKey, 12 + keyLen + 16);
+
           break;
         }
         else {
+#ifdef DEBUG
           Serial.println("Unknown request.");
+#endif
           break;
         }
       }
       else {
+#ifdef DEBUG
         Serial.println("Authentication error");
+#endif
       }
     }
   }
+#ifdef DEBUG
   Serial.println("Server disconnected.");
+#endif
 }

@@ -2,6 +2,8 @@
 #include<WiFi.h>
 #include <mbedtls/gcm.h>
 
+#define DEBUG
+
 #include "credentials.h"
 #define CAMERA_MODEL_AI_THINKER
 #include "camera_pins.h"
@@ -15,6 +17,9 @@ WiFiServer userTCP(50001);
 IPAddress local_IP(192, 168, 1, 8);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
+
+int servoPitch = 0;
+int servoYaw = 0;
 
 void setup() {
 
@@ -96,13 +101,17 @@ void setup() {
 void loop() {
   WiFiClient client = userTCP.available();
   if (client) {
+    #ifdef DEBUG
     Serial.println("User Connected");
+    #endif
     userActions(client);
   }
 
   client = serverTCP.available();
   if (client) {
+    #ifdef DEBUG
     Serial.println("Server Connected");
+    #endif
     serverActions(client);
   }
 }
