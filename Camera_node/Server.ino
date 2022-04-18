@@ -1,10 +1,10 @@
 void serverActions(WiFiClient client) {
-  uint8_t data[200];
-  unsigned char message[172];
+  uint8_t data[1000];
+  unsigned char message[972];
   while (client.connected()) {
     if (client.available()) {
-      int len = client.read(data, 200);
-      
+      int len = client.read(data, 1000);
+
 #ifdef DEBUG
       Serial.print("Received message. Length = ");
       Serial.print(len);
@@ -20,7 +20,9 @@ void serverActions(WiFiClient client) {
       int auth = decrypt(serverKey, data, message, msgLen);
       if (auth == 0) {
 
-        if (message[12] == int('K') && message[13] == int('E') && message[14] == int('Y')) {
+        message[msgLen] = '\0';
+
+        if (message[0] == int('K') && message[1] == int('E') && message[2] == int('Y')) {
 #ifdef DEBUG
           Serial.println("Key requested.");
 #endif
@@ -50,9 +52,35 @@ void serverActions(WiFiClient client) {
           Serial.println();
 #endif
 
-          unsigned char encryptedKey[12 + 16 + keyLen];
-          encrypt((uint8_t*)serverKey, (char*)userKey, encryptedKey, keyLen, message);
-          client.write((const char*)encryptedKey, 12 + keyLen + 16);
+          unsigned char encryptedKey[MBEDTLS_MPI_MAX_SIZE];
+          size_t olen = 0;
+
+          mbedtls_pk_init(&pk);
+
+          int pkLen = msgLen - 3 + 1; // - Req, + 1 null character
+          unsigned char* publicKey = message + 3;
+
+
+          int ret = mbedtls_pk_parse_public_key(&pk, (const unsigned char*)(publicKey), pkLen);
+#ifdef DEBUG
+          Serial.print("Public Key read status : ");
+          Serial.println(ret);
+#endif
+
+          ret = mbedtls_pk_encrypt(&pk, (const unsigned char*)userKey, keyLen, encryptedKey, &olen, sizeof(encryptedKey), mbedtls_ctr_drbg_random, &ctr_drbg);
+#ifdef DEBUG
+          Serial.print("RSA Encryption status : ");
+          Serial.println(ret);
+#endif
+
+          if (ret == 0) {
+#ifdef DEBUG
+            Serial.println(olen);
+#endif
+            client.write((const char*)encryptedKey, olen);
+          }
+
+          mbedtls_pk_free(&pk);
 
           break;
         }

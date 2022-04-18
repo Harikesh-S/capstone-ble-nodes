@@ -1,6 +1,9 @@
 #include <esp_camera.h>
 #include<WiFi.h>
 #include <mbedtls/gcm.h>
+#include "mbedtls/pk.h";
+#include "mbedtls/entropy.h";
+#include "mbedtls/ctr_drbg.h";
 
 #define DEBUG
 
@@ -17,6 +20,10 @@ WiFiServer userTCP(50001);
 IPAddress local_IP(192, 168, 1, 8);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
+
+mbedtls_pk_context pk;
+mbedtls_entropy_context entropy;
+mbedtls_ctr_drbg_context ctr_drbg;
 
 int servoPitch = 0;
 int servoYaw = 0;
@@ -78,6 +85,13 @@ void setup() {
   // drop down frame size for higher initial frame rate
   s->set_framesize(s, FRAMESIZE_HD);
 
+  mbedtls_entropy_init(&entropy);
+  mbedtls_ctr_drbg_init(&ctr_drbg);
+
+  int ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
+  Serial.print("RNG generation status : ");
+  Serial.println(ret);
+
   if (!WiFi.config(local_IP, gateway, subnet)) {
     Serial.println("Failed to configure");
     while (true) {
@@ -101,17 +115,17 @@ void setup() {
 void loop() {
   WiFiClient client = userTCP.available();
   if (client) {
-    #ifdef DEBUG
+#ifdef DEBUG
     Serial.println("User Connected");
-    #endif
+#endif
     userActions(client);
   }
 
   client = serverTCP.available();
   if (client) {
-    #ifdef DEBUG
+#ifdef DEBUG
     Serial.println("Server Connected");
-    #endif
+#endif
     serverActions(client);
   }
 }
