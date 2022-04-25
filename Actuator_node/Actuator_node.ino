@@ -95,6 +95,7 @@ class LedCallbacks: public BLECharacteristicCallbacks {
       char* rxValue = (char*) pCharacteristic->getData();
       unsigned char decoded[16];
       int auth = decrypt(rxValue, decoded);
+      bool validValue = true;
       if (auth == 0) {
 #ifdef DEBUG
         Serial.write(decoded, 16);
@@ -108,28 +109,37 @@ class LedCallbacks: public BLECharacteristicCallbacks {
 #ifdef DEBUG
             Serial.println("Invalid data - NAN");
 #endif
-            return;
+            validValue = false;
           }
           newValue += digit;
           i++;
         }
         if (newValue > 4095) {
 #ifdef DEBUG
-          Serial.println("Invalid data - > 255");
+          Serial.println("Invalid data - > Max value = 4095");
 #endif
-          return;
+          newValue = 4095;
         }
-        ledValue = newValue;
+        if (validValue) {
+          ledValue = newValue;
 #ifdef DEBUG
-        Serial.print("New LED value = ");
-        Serial.println(newValue);
+          Serial.print("New LED value = ");
+          Serial.println(newValue);
 #endif
+        }
       }
       else {
 #ifdef DEBUG
         Serial.println("Auth error");
 #endif
       }
+
+      // Update charactersitic with new validated value
+      char newData[16];
+      unsigned char encryptedData[44];
+      sprintf(newData, "%d;", ledValue);
+      encrypt(newData, encryptedData);
+      pCharLed->setValue((uint8_t*)((char*)encryptedData), 44);
     }
 };
 
@@ -157,7 +167,8 @@ void setup() {
 
   pCharLed = pService->createCharacteristic(
                CHAR_UUID_LED,
-               BLECharacteristic::PROPERTY_WRITE
+               BLECharacteristic::PROPERTY_WRITE |
+               BLECharacteristic::PROPERTY_READ
              );
   pCharLed->setCallbacks(new LedCallbacks);
 

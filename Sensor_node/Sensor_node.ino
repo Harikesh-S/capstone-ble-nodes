@@ -126,22 +126,38 @@ class SleepTimerCharacteristicCallbacks: public BLECharacteristicCallbacks {
         Serial.println();
 #endif
         int newSleepTime = 0, i = 0;
+        bool validValue = true;
         while (decoded[i] != ';') {
+          if (decoded[i] < '0' || decoded[i] > '9') {
+#ifdef DEBUG
+            Serial.println("Invalid data - NAN");
+#endif
+            validValue = false;
+          }
           newSleepTime *= 10;
           newSleepTime += (int)decoded[i] - (int)'0';
           i++;
         }
-        sleepTime = newSleepTime;
+        if (validValue) {
+          sleepTime = newSleepTime;
 #ifdef DEBUG
-        Serial.print("New deep sleep time = ");
-        Serial.println(newSleepTime);
+          Serial.print("New deep sleep time = ");
+          Serial.println(newSleepTime);
 #endif
+        }
       }
       else {
 #ifdef DEBUG
         Serial.println("Auth error");
 #endif
       }
+
+      // Update charactersitic with new validated value
+      char newData[16];
+      unsigned char encryptedData[44];
+      sprintf(newData, "%d;", sleepTime);
+      encrypt(newData, encryptedData);
+      pCharSleep->setValue((uint8_t*)((char*)encryptedData), 44);
     }
 };
 
@@ -220,7 +236,8 @@ void setup() {
 
   pCharSleep = pService->createCharacteristic(
                  CHAR_UUID_SLEEP,
-                 BLECharacteristic::PROPERTY_WRITE
+                 BLECharacteristic::PROPERTY_WRITE |
+                 BLECharacteristic::PROPERTY_READ
                );
   pCharSleep->setCallbacks(new SleepTimerCharacteristicCallbacks);
 
