@@ -18,7 +18,7 @@ void userActions(WiFiClient client) {
 
     // Update input values
     char updateStr[10];
-    sprintf(updateStr, "%d|%d", servoPitch, servoYaw);
+    sprintf(updateStr, "%d|%d", servoPitchVal, servoYawVal);
     len = strlen(updateStr);
 #ifdef DEBUG
     Serial.print(updateStr);
@@ -49,7 +49,7 @@ void userActions(WiFiClient client) {
 
         // Set value request
         if (msg[0] == (int)'s' && msg[1] == (int)'e' && msg[2] == (int)'t') {
-              int newValue = 0;
+          int newValue = 0;
           switch (msg[4]) {
             case (int)'0': // Pitch servo value
               for (int i = 6; i < msgLen; i++) {
@@ -60,11 +60,13 @@ void userActions(WiFiClient client) {
               }
               if (newValue > 180)
                 newValue = 180;
-              servoPitch = newValue;
+              servoPitchVal = newValue;
 #ifdef DEBUG
               Serial.print("New value of pitch servo = ");
-              Serial.println(servoPitch);
+              Serial.println(servoPitchVal);
 #endif
+
+              pitchServo.write(servoPitchVal);
               break;
 
             case (int)'1': // Yaw servo value
@@ -76,23 +78,24 @@ void userActions(WiFiClient client) {
               }
               if (newValue > 180)
                 newValue = 180;
-              servoYaw = newValue;
+              servoYawVal = newValue;
 #ifdef DEBUG
               Serial.print("New value of pitch servo = ");
-              Serial.println(servoYaw);
+              Serial.println(servoYawVal);
 #endif
+              yawServo.write(servoYawVal);
               break;
 
             default:
 #ifdef DEBUG
               Serial.println("Invalid request from user");
 #endif
-break;
+              break;
           }
 
           // Update user with new values
           char updateStr[10];
-          sprintf(updateStr, "%d|%d", servoPitch, servoYaw);
+          sprintf(updateStr, "%d|%d", servoPitchVal, servoYawVal);
           int updateLen = strlen(updateStr);
 #ifdef DEBUG
           Serial.print(updateStr);
@@ -109,9 +112,9 @@ break;
         }
       }
       else {
-        #ifdef DEBUG
+#ifdef DEBUG
         Serial.println("Authentication error when decoding message");
-        #endif
+#endif
       }
     }
     // Take Image

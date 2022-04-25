@@ -1,5 +1,8 @@
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include <esp_camera.h>
-#include<WiFi.h>
+#include <ESP32Servo.h>
+#include <WiFi.h>
 #include <mbedtls/gcm.h>
 #include "mbedtls/pk.h";
 #include "mbedtls/entropy.h";
@@ -10,6 +13,9 @@
 #include "credentials.h"
 #define CAMERA_MODEL_AI_THINKER
 #include "camera_pins.h"
+#define PITCH_SERVO_PIN 14
+#define YAW_SERVO_PIN 15
+#define STATUS_LED 33
 
 const char* ssid = SSID;
 const char* password = PASSWORD;
@@ -25,13 +31,34 @@ mbedtls_pk_context pk;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 
-int servoPitch = 0;
-int servoYaw = 0;
+int servoPitchVal = 0;
+int servoYawVal = 0;
+
+Servo servoN1; // Used to ignore two PWM channels
+Servo servoN2;
+Servo pitchServo;
+Servo yawServo;
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detector
 
+#ifdef DEBUG
   Serial.begin(115200);
-  Serial.println();
+#endif
+
+  pitchServo.setPeriodHertz(50);
+  yawServo.setPeriodHertz(50);
+
+  servoN1.attach(2, 1000, 2000);
+  servoN2.attach(13, 1000, 2000); // PWM channels used by the camera
+
+  pitchServo.attach(PITCH_SERVO_PIN, 1000, 2000);
+  yawServo.attach(YAW_SERVO_PIN, 1000, 2000);
+
+  pitchServo.write(servoPitchVal);
+  yawServo.write(servoYawVal);
+
+  pinMode(STATUS_LED, OUTPUT);
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -62,7 +89,6 @@ void setup() {
     config.jpeg_quality = 10;
     config.fb_count = 2;
   } else {
-    Serial.println("nub");
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;
     config.fb_count = 1;
@@ -71,7 +97,9 @@ void setup() {
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
+#ifdef DEBUG
     Serial.printf("Camera init failed with error 0x%x", err);
+#endif
     return;
   }
 
@@ -89,11 +117,15 @@ void setup() {
   mbedtls_ctr_drbg_init(&ctr_drbg);
 
   int ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
+#ifdef DEBUG
   Serial.print("RNG generation status : ");
   Serial.println(ret);
+#endif
 
   if (!WiFi.config(local_IP, gateway, subnet)) {
+#ifdef DEBUG
     Serial.println("Failed to configure");
+#endif
     while (true) {
       delay(10);
     }
@@ -102,12 +134,20 @@ void setup() {
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+
+    digitalWrite(STATUS_LED, !digitalRead(STATUS_LED));
+#ifdef DEBUG
     Serial.print(".");
+#endif
   }
+#ifdef DEBUG
   Serial.println();
 
   Serial.print("WiFi connected, IP Address: ");
   Serial.println(WiFi.localIP());
+#endif
+
+  digitalWrite(STATUS_LED, LOW);
 
   userTCP.begin();
   serverTCP.begin();
