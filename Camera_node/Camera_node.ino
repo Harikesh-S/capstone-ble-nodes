@@ -13,8 +13,8 @@
 #include "credentials.h"
 #define CAMERA_MODEL_AI_THINKER
 #include "camera_pins.h"
-#define PITCH_SERVO_PIN 14
-#define YAW_SERVO_PIN 15
+#define PITCH_SERVO_PIN 15
+#define YAW_SERVO_PIN 14
 #define STATUS_LED 33
 
 const char* ssid = SSID;
@@ -32,7 +32,7 @@ mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 
 int servoPitchVal = 0;
-int servoYawVal = 0;
+int servoYawVal = 90;
 
 Servo servoN1; // Used to ignore two PWM channels
 Servo servoN2;
@@ -52,8 +52,8 @@ void setup() {
   servoN1.attach(2, 1000, 2000);
   servoN2.attach(13, 1000, 2000); // PWM channels used by the camera
 
-  pitchServo.attach(PITCH_SERVO_PIN, 1000, 2000);
-  yawServo.attach(YAW_SERVO_PIN, 1000, 2000);
+  pitchServo.attach(PITCH_SERVO_PIN, 500, 2400);
+  yawServo.attach(YAW_SERVO_PIN, 500, 2400);
 
   pitchServo.write(servoPitchVal);
   yawServo.write(servoYawVal);

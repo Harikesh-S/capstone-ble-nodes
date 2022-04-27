@@ -3,7 +3,7 @@ unsigned char encImg[65535]; // Buffer to hold encrypted image data
 void userActions(WiFiClient client) {
   if (client.connected()) {
     // Send the structure of the node at the start
-    char structure[100] = "{\"type\":\"camera\", \"input-tags\":[\"pitch\",\"yaw\"], \"input-values\":[\"\",\"\"]}";
+    char structure[100] = "{\"type\":\"camera\", \"input-tags\":[\"Tilt\",\"Pan\"], \"input-values\":[\"\",\"\"]}";
     //sprintf(structure, "{\"type\":\"camera\", \"input-tags\":[\"pitch\",\"yaw\"], \"input-values\":[\"\",\"\"]}", nonce++);
     int len = strlen(structure);
 #ifdef DEBUG
